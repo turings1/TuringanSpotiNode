@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Clone</title>
+    <link rel="stylesheet" href="icons8-spotify-48.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <h1><i class="fab fa-spotify"></i> Spotify Clone</h1>
+    <form id="songForm" enctype="multipart/form-data">
+        <label>Title:</label>
+        <input type="text" id="title" required><br><br>
+        
+        <label>Artist:</label>
+        <input type="text" id="artist" required><br><br>
+        
+        <label>Album:</label>
+        <input type="text" id="album"><br><br>
+        
+        <label>Song File:</label>
+        <input type="file" id="song_file" accept="audio/*" required><br><br>
+        
+        <button type="submit">Add Song</button>
+    </form>
+
+    <h1>Search Songs</h1>
+    <input type="text" id="searchInput" placeholder="Search by title, artist, or album">
+
+    <h1>Song List</h1>
+    <table id="songTable" border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Artist</th>
+                <th>Album</th>
+                <th>Play</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        // Add song to the database
+        document.getElementById('songForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const title = document.getElementById('title').value;
+            const artist = document.getElementById('artist').value;
+            const album = document.getElementById('album').value;
+            const song_file = document.getElementById('song_file').files[0];
+
+            formData.append('title', title);
+            formData.append('artist', artist);
+            formData.append('album', album);
+            formData.append('song_file', song_file);
+
+            fetch('/add-song', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.text())
+              .then(data => {
+                  alert(data);
+                  loadSongs(); // Reload song list
+              });
+        });
+
+        // Load songs from the database and display them in the table
+        function loadSongs() {
+            fetch('/songs')
+                .then(response => response.json())
+                .then(data => {
+                    renderSongs(data);
+                });
+        }
+
+        // Render the song list in the table
+        function renderSongs(songs) {
+            const tableBody = document.querySelector('#songTable tbody');
+            tableBody.innerHTML = ''; // Clear table
+            
+            songs.forEach(song => {
+                let row = `
+                    <tr>
+                        <td>${song.id}</td>
+                        <td>${song.title}</td>
+                        <td>${song.artist}</td>
+                        <td>${song.album}</td>
+                        <td><audio controls><source src="${song.song_url}" type="audio/mpeg"></audio></td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // Filter songs based on search input
+        function filterSongs(songs, query) {
+            return songs.filter(song => 
+                song.title.toLowerCase().includes(query) ||
+                song.artist.toLowerCase().includes(query) ||
+                song.album.toLowerCase().includes(query)
+            );
+        }
+
+        // Load and filter songs when the search input changes
+        document.getElementById('searchInput').addEventListener('input', function () {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+
+            fetch('/songs')
+                .then(response => response.json())
+                .then(data => {
+                    const filteredSongs = filterSongs(data, query);
+                    renderSongs(filteredSongs);
+                });
+        });
+
+        // Load songs when the page loads
+        loadSongs();
+    </script>
+</body>
+</html>
